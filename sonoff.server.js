@@ -54,6 +54,32 @@ server.get('/devices/:deviceId/status', function (req, res) {
     }
 });
 
+//returns an simple 0 or 1 for a known device
+server.get('/devices/:deviceId/temperature', function (req, res) {
+    log.log('GET | %s | %s ', req.method, req.url);
+
+    var d = devices.getDeviceTemperature(req.params.deviceId);
+
+    if (!d || d == "disconnected") {
+        res.status(404).send('Sonoff device ' + req.params.deviceId + ' not found');
+    } else {
+        res.status(200).send(d);
+    }
+});
+
+//returns an simple 0 or 1 for a known device
+server.get('/devices/:deviceId/humidity', function (req, res) {
+    log.log('GET | %s | %s ', req.method, req.url);
+
+    var d = devices.getDeviceHumidity(req.params.deviceId);
+
+    if (!d || d == "disconnected") {
+        res.status(404).send('Sonoff device ' + req.params.deviceId + ' not found');
+    } else {
+        res.status(200).send(d);
+    }
+});
+
 //switch the device
 server.get('/devices/:deviceId/:state', function (req, res) {
     log.log('GET | %s | %s ', req.method, req.url);

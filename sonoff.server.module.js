@@ -7,10 +7,10 @@ module.exports.createServer = function (config) {
     const log = config.logger;
 
     if (config.server.privateKey === undefined)
-        config.server.privateKey = fs.readFileSync(path.resolve(__dirname, './certs/server.key'));
+        config.server.privateKey = fs.readFileSync(path.resolve(__dirname, './certs2/key.pem'));
 
     if (config.server.certificate === undefined)
-        config.server.certificate = fs.readFileSync(path.resolve(__dirname, './certs/server.crt'));
+        config.server.certificate = fs.readFileSync(path.resolve(__dirname, './certs2/cert.pem'));
 
     //set initialized parameters
     var state = {
@@ -35,6 +35,7 @@ module.exports.createServer = function (config) {
                 state.knownDevices[i] = device;
                 updated = true;
                 callDeviceListeners(state.listeners.onDeviceUpdatedListeners, device);
+                log.log("Device actually updated %s %s %s",device.id,i,state.knownDevices[i].temperature)
             }
         }
         if (!updated) {
@@ -121,6 +122,7 @@ module.exports.createServer = function (config) {
 
     // Register routes
     server.post('/dispatch/device', function (req, res) {
+	log.log('@@@@@@@@@@@@ New device ask for config @@@@@@@@@');
         log.log('REQ | %s | %s ', req.method, req.url);
         log.trace('REQ | %s', JSON.stringify(req.body));
         res.json({
@@ -133,6 +135,7 @@ module.exports.createServer = function (config) {
 
     // Register routes
     server.get('/', function (req, res) {
+	log.log('############## Strange #########');
         log.log('REQ | %s | %s ', req.method, req.url);
         res.send('OK');
     });
@@ -186,12 +189,21 @@ module.exports.createServer = function (config) {
                         if (!device) {
                             log.error('ERR | WS | Unknown device ', data.deviceid);
                         } else {
-                            device.state = data.params.switch;
+                            if (data.params.switch)
+                            	device.state = data.params.switch;
+                            log.log("Temperature : %s",data.params.currentTemperature)
+                            if (data.params.currentTemperature)
+                            	device.temperature = data.params.currentTemperature;
+                            if (data.params.currentHumidity)
+                            	device.humidity = data.params.currentHumidity;
                             device.conn = conn;
                             device.rawMessageLastUpdate = data;
                             device.rawMessageLastUpdate.timestamp = Date.now();
                             state.updateKnownDevice(device);
+                            device = state.getDeviceById(data.deviceid)
+	                        log.log('INFO | WS | Device %s updated temperature : %s', device.id, device.temperature);
                         }
+                        
 
                         break;
                     case 'register':
@@ -211,7 +223,11 @@ module.exports.createServer = function (config) {
                         device.rawMessageRegister = data;
                         device.rawMessageRegister.timestamp = Date.now();
                         addConnectionIsAliveCheck(device);
+
                         state.updateKnownDevice(device);
+		                // state.pushMessage({ action: 'update', value: { switch: "off" }, target: data.deviceid });
+
+	                log.log('*********** Registering a new device **********');
                         log.log('INFO | WS | Device %s registered', device.id);
                         break;
                     default: log.error('TODO | Unknown action "%s"', data.action); break;
@@ -266,7 +282,7 @@ module.exports.createServer = function (config) {
         //currently all known devices are returned with a hint if they are currently connected
         getConnectedDevices: () => {
             return state.knownDevices.map(x => {
-                return { id: x.id, state: x.state, model: x.model, kind: x.kind, version: x.version, isConnected: (typeof x.conn !== 'undefined'), isAlive: x.isAlive, rawMessageRegister: x.rawMessageRegister, rawMessageLastUpdate: x.rawMessageLastUpdate }
+                return { id: x.id, state: x.state, temperature: x.temperature, humidity: x.humidity, model: x.model, kind: x.kind, version: x.version, isConnected: (typeof x.conn !== 'undefined'), isAlive: x.isAlive, rawMessageRegister: x.rawMessageRegister, rawMessageLastUpdate: x.rawMessageLastUpdate }
             });
         },
 
@@ -274,8 +290,25 @@ module.exports.createServer = function (config) {
             var d = state.getDeviceById(deviceId);
             if (!d || (typeof d.conn == 'undefined')) return "disconnected";
             return d.state;
+        }, 
+
+        getDeviceTemperature: (deviceId) => {
+            var d = state.getDeviceById(deviceId);
+            if (!d || (typeof d.conn == 'undefined')) return "disconnected";
+            var temperature = d.temperature;
+            if (! temperature) temperature="-99"
+            return temperature;
         },
 
+        getDeviceHumidity: (deviceId) => {
+            var d = state.getDeviceById(deviceId);
+            if (!d || (typeof d.conn == 'undefined')) return "disconnected";
+            var humidity = d.humidity;
+            if (! humidity) humidity="-99"
+            return humidity;
+        },
+
+        
         turnOnDevice: (deviceId) => {
             var d = state.getDeviceById(deviceId);
             if (!d || (typeof d.conn == 'undefined')) return "disconnected";
