@@ -286,6 +286,7 @@ module.exports.createServer = function (config) {
             return state.knownDevices.map(x => {
                 return { id: x.id, 
                          state: x.state, 
+                         power: x.power, 
                          temperature: x.temperature, 
                          humidity: x.humidity, 
                          model: x.model, 
