@@ -196,6 +196,8 @@ module.exports.createServer = function (config) {
                             	device.temperature = data.params.currentTemperature;
                             if (data.params.currentHumidity)
                             	device.humidity = data.params.currentHumidity;
+                            if (data.params.power)
+                            	device.power = data.params.power;
                             device.conn = conn;
                             device.rawMessageLastUpdate = data;
                             device.rawMessageLastUpdate.timestamp = Date.now();
@@ -282,7 +284,17 @@ module.exports.createServer = function (config) {
         //currently all known devices are returned with a hint if they are currently connected
         getConnectedDevices: () => {
             return state.knownDevices.map(x => {
-                return { id: x.id, state: x.state, temperature: x.temperature, humidity: x.humidity, model: x.model, kind: x.kind, version: x.version, isConnected: (typeof x.conn !== 'undefined'), isAlive: x.isAlive, rawMessageRegister: x.rawMessageRegister, rawMessageLastUpdate: x.rawMessageLastUpdate }
+                return { id: x.id, 
+                         state: x.state, 
+                         temperature: x.temperature, 
+                         humidity: x.humidity, 
+                         model: x.model, 
+                         kind: x.kind, 
+                         version: x.version, 
+                         isConnected: (typeof x.conn !== 'undefined'), 
+                         isAlive: x.isAlive, 
+                         rawMessageRegister: x.rawMessageRegister, 
+                         rawMessageLastUpdate: x.rawMessageLastUpdate }
             });
         },
 
